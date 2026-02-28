@@ -1,0 +1,10 @@
+﻿fastapi
+uvicorn
+pydantic
+pymongo
+langchain
+langchain-core
+langchain-google-genai
+python-dotenv
+numpy
+pandas

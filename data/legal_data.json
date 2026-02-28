@@ -1,0 +1,38 @@
+[
+  {
+    "law_id": "LDD2024",
+    "article_num": "Điều 127",
+    "content": "1. Việc sử dụng đất đa mục đích phải phù hợp với quy hoạch, kế hoạch sử dụng đất đã được cơ quan nhà nước có thẩm quyền phê duyệt. \n2. Đất nông nghiệp được sử dụng kết hợp với mục đích thương mại, dịch vụ, chăn nuôi, trồng cây dược liệu nhưng không được làm thay đổi loại đất theo mục đích sử dụng đất chính.",
+    "knowledge_base": {
+      "conflicts": [
+        "Có thể chồng chéo với quy định về mật độ xây dựng trong Luật Xây Dựng nếu xây công trình trên đất nông nghiệp.",
+        "Mâu thuẫn tiềm ẩn với quy hoạch ngành nông nghiệp tại địa phương."
+      ],
+      "practical_risks": [
+        "Rủi ro bị xử phạt hành chính nếu xây dựng công trình kiên cố trên đất nông nghiệp đa mục đích.",
+        "Khó khăn trong việc xác định hạn mức thuế do mục đích sử dụng không rõ ràng."
+      ],
+      "related_decrees": [
+        "Nghị định hướng dẫn thi hành Luật Đất đai 2024 (Dự thảo).",
+        "Thông tư quy định về kinh tế trang trại."
+      ]
+    }
+  },
+  {
+    "law_id": "LDD2024",
+    "article_num": "Điều 79",
+    "content": "Nhà nước thu hồi đất trong trường hợp thật cần thiết để thực hiện dự án phát triển kinh tế - xã hội vì lợi ích quốc gia, công cộng nhằm phát huy nguồn lực đất đai, nâng cao hiệu quả sử dụng đất, phát triển hạ tầng kinh tế - xã hội theo hướng hiện đại, thực hiện chính sách an sinh xã hội, bảo vệ môi trường và bảo tồn di sản văn hóa.",
+    "knowledge_base": {
+      "conflicts": [
+        "Thuật ngữ 'thật cần thiết' chưa được định lượng cụ thể, dễ gây tranh chấp với quyền tài sản trong Bộ Luật Dân Sự."
+      ],
+      "practical_risks": [
+        "Chủ đầu tư dễ vướng mắc pháp lý khi giải phóng mặt bằng nếu dự án không nằm rõ ràng trong danh mục thu hồi.",
+        "Khiếu kiện kéo dài từ người dân do không đồng thuận về đơn giá đền bù."
+      ],
+      "related_decrees": [
+        "Nghị định quy định về bồi thường, hỗ trợ, tái định cư."
+      ]
+    }
+  }
+]
