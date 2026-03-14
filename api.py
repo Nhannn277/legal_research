@@ -63,6 +63,59 @@ def find_best_match(query_text, embedding_model):
         print(f"Vector search error: {e}")
         return None
 
+
+class ExplainRequest(BaseModel):
+    query: str
+    law_content: str
+    practical_risks: list = []
+
+@app.post("/api/explain")
+async def explain_legal_info(req: ExplainRequest):
+    used_api_key = os.getenv("GOOGLE_API_KEY")
+    if not used_api_key:
+        raise HTTPException(status_code=500, detail="Thiếu cấu hình GOOGLE_API_KEY trong file .env của Backend.")
+    os.environ["GOOGLE_API_KEY"] = used_api_key
+
+    try:
+        # Quay lại model ổn định nhất tương thích với thư viện hiện tại
+        llm = ChatGoogleGenerativeAI(model="models/gemini-flash-latest", temperature=0.3)
+
+        template = """
+        Bạn là một chuyên gia tư vấn pháp lý. Dựa vào các thông tin sau đây, hãy trả lời câu hỏi của người dùng theo đúng định dạng sau:
+        "Tóm tắt ngắn gọn: điều luật này sẽ ...., nhưng....., bạn nên......."
+
+        NỘI DUNG LUẬT:
+        {law_content}
+        
+        RỦI RO THỰC TẾ CẦN LƯU Ý:
+        {risks}
+        
+        CÂU HỎI CỦA NGƯỜI DÙNG:
+        {question}
+        """
+        prompt = PromptTemplate.from_template(template)
+        
+        # Đảm bảo practical_risks là list string
+        risks_text = "\n".join([str(r) for r in req.practical_risks]) if req.practical_risks else ""
+
+        rag_chain = (
+            {
+                "law_content": lambda x: req.law_content,
+                "risks": lambda x: risks_text,
+                "question": lambda x: req.query
+            }
+            | prompt
+            | llm
+            | StrOutputParser()
+        )
+        
+        ai_response = rag_chain.invoke({})
+        return {"explanation": ai_response}
+
+    except Exception as e:
+        print(f"Error in /api/explain: {e}") # Log lỗi ra terminal để debug
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/search")
 async def search_legal_info(req: ChatRequest):
     # Lấy API Key DÀNH RIÊNG TỪ FILE .ENV CỦA BACKEND, bỏ qua việc người dùng nhập từ Web Frontend.
@@ -75,9 +128,8 @@ async def search_legal_info(req: ChatRequest):
 
 
     try:
-        # Setup models
+        # Setup models (embedding only)
         embeddings_model = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
-        llm = ChatGoogleGenerativeAI(model="models/gemini-flash-latest", temperature=0.3)
 
         # Retrieval
         match_doc = find_best_match(req.query, embeddings_model)
@@ -93,36 +145,6 @@ async def search_legal_info(req: ChatRequest):
         if not kb_info:
             kb_info = {"conflicts": [], "practical_risks": [], "related_decrees": []}
 
-        # Augment & Generate
-        template = """
-        Bạn là một chuyên gia tư vấn pháp lý. Dựa vào các thông tin sau đây, hãy trả lời câu hỏi của người dùng một cách ngắn gọn, dễ hiểu.
-        
-        NỘI DUNG LUẬT:
-        {law_content}
-        
-        RỦI RO THỰC TẾ CẦN LƯU Ý:
-        {risks}
-        
-        CÂU HỎI CỦA NGƯỜI DÙNG:
-        {question}
-        
-        Hãy tổng hợp và đưa ra lời khuyên:
-        """
-        prompt = PromptTemplate.from_template(template)
-        
-        rag_chain = (
-            {
-                "law_content": lambda x: match_doc['content'],
-                "risks": lambda x: "\n".join(kb_info.get('practical_risks', [])),
-                "question": lambda x: req.query
-            }
-            | prompt
-            | llm
-            | StrOutputParser()
-        )
-        
-        ai_response = rag_chain.invoke({})
-
         return {
             "found": True,
             "law_id": match_doc["law_id"],
@@ -130,8 +152,7 @@ async def search_legal_info(req: ChatRequest):
             "content": match_doc["content"],
             "conflicts": kb_info.get("conflicts", []),
             "practical_risks": kb_info.get("practical_risks", []),
-            "related_decrees": kb_info.get("related_decrees", []),
-            "ai_response": ai_response
+            "related_decrees": kb_info.get("related_decrees", [])
         }
 
     except Exception as e:

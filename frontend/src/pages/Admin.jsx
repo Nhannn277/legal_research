@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import './Admin.css' // Import CSS mới
 
 function Admin() {
   const [articles, setArticles] = useState([])
   const [loading, setLoading] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
+  const [statusType, setStatusType] = useState('success') // 'success' | 'error'
 
   // Form State
   const [form, setForm] = useState({
@@ -32,6 +34,7 @@ function Admin() {
     } catch (error) {
       console.error(error)
       setStatusMsg("Lỗi khi tải danh sách điều luật.")
+      setStatusType('error')
     } finally {
       setLoading(false)
     }
@@ -55,6 +58,7 @@ function Admin() {
     setForm({ law_id: '', article_num: '', content: '' })
     setKbForm({ conflicts: '', practical_risks: '', related_decrees: '' })
     setIsEditing(false)
+    setStatusMsg('')
   }
 
   const handleEdit = (article) => {
@@ -72,6 +76,9 @@ function Admin() {
       related_decrees: article.kb_info?.related_decrees?.join('; ') || ''
     })
     
+    setStatusMsg(`Đang chỉnh sửa: ${article.article_num}`)
+    setStatusType('success')
+    
     // Scroll lên top
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -82,11 +89,13 @@ function Admin() {
     try {
       setLoading(true)
       await axios.delete(`http://localhost:8000/api/admin/articles/${article_num}`)
-      setStatusMsg("Đã xoá thành công!")
+      setStatusMsg("Đã xoá điều luật thành công!")
+      setStatusType('success')
       fetchArticles()
     } catch (error) {
       console.error(error)
-      setStatusMsg("Lỗi khi xoá.")
+      setStatusMsg("Lỗi khi xoá dữ liệu.")
+      setStatusType('error')
     } finally {
       setLoading(false)
     }
@@ -96,12 +105,14 @@ function Admin() {
     e.preventDefault()
     if (!form.law_id || !form.article_num || !form.content) {
       setStatusMsg("Vui lòng điền đủ thông tin bắt buộc: ID Luật, Số Điều, Nội dung.")
+      setStatusType('error')
       return
     }
 
     try {
       setLoading(true)
-      setStatusMsg("Đang lưu và tạo Vector Embedding...")
+      setStatusMsg("Đang lưu dữ liệu và tạo Vector Embedding...")
+      setStatusType('success')
 
       // Format dữ liệu gửi lên API
       const newArticle = {
@@ -117,132 +128,190 @@ function Admin() {
       await axios.post('http://localhost:8000/api/admin/articles', newArticle)
       
       setStatusMsg(isEditing ? "Đã cập nhật thành công!" : "Đã thêm mới thành công!")
+      setStatusType('success')
       resetForm()
       fetchArticles()
     } catch (error) {
       console.error(error)
-      setStatusMsg("Có lỗi xảy ra khi lưu. Vui lòng thử lại.")
+      setStatusMsg("Có lỗi xảy ra khi lưu. Vui lòng kiểm tra kết nối Server.")
+      setStatusType('error')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1000px', margin: '0 auto' }}>
-      <h1>⚙️ Quản Trị Hệ Thống Luật</h1>
-      
-      {/* Form Thêm/Sửa */}
-      <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '30px' }}>
-        <h2>{isEditing ? "Chỉnh sửa Điều Luật" : "Thêm Điều Luật Mới"}</h2>
-        {statusMsg && (
-          <div style={{ padding: '12px', marginBottom: '16px', backgroundColor: '#e1ecf4', border: '1px solid #105bd8', borderRadius: '6px', color: '#105bd8' }}>
-            {statusMsg}
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit}>
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Mã Luật (VD: Luật Đất đai 2024)</label>
+    <div className="admin-container">
+      <div className="admin-header">
+        <h1>⚙️ Quản Trị Hệ Thống Luật</h1>
+        <a href="/" className="btn-back">← Về Trang Chủ</a>
+      </div>
+
+      <div className="admin-grid">
+        {/* Cột Trái: Form Thêm/Sửa */}
+        <div className="admin-card form-section">
+          <h2 className="form-title">{isEditing ? "✏️ Chỉnh sửa Điều Luật" : "➕ Thêm Điều Luật Mới"}</h2>
+          
+          {statusMsg && (
+            <div className={`status-msg ${statusType === 'success' ? 'status-success' : 'status-error'}`}>
+              {statusType === 'success' ? '✅' : '⚠️'} {statusMsg}
+            </div>
+          )}
+          
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>Mã Luật <span style={{color:'red'}}>*</span></label>
               <input 
-                name="law_id" value={form.law_id} onChange={handleInputChange}
-                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} 
+                className="form-control"
+                name="law_id" 
+                value={form.law_id} 
+                onChange={handleInputChange}
+                placeholder="VD: Luật Đất đai 2024"
               />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Số Điều (VD: Điều 127)</label>
+
+            <div className="form-group">
+              <label>Số Điều <span style={{color:'red'}}>*</span></label>
               <input 
-                name="article_num" value={form.article_num} onChange={handleInputChange} disabled={isEditing}
-                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', backgroundColor: isEditing ? '#f5f5f5' : 'white' }} 
+                className="form-control"
+                name="article_num" 
+                value={form.article_num} 
+                onChange={handleInputChange} 
+                disabled={isEditing}
+                placeholder="VD: Điều 127"
+                style={{ backgroundColor: isEditing ? '#f5f5f5' : 'white' }}
               />
             </div>
-          </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Nội dung chi tiết luật</label>
-            <textarea 
-              name="content" value={form.content} onChange={handleInputChange} rows="5"
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} 
-            ></textarea>
-          </div>
+            <div className="form-group">
+              <label>Nội dung chi tiết luật <span style={{color:'red'}}>*</span></label>
+              <textarea 
+                className="form-control"
+                name="content" 
+                value={form.content} 
+                onChange={handleInputChange} 
+                rows="6"
+                placeholder="Nhập toàn văn nội dung điều luật..."
+              ></textarea>
+            </div>
 
-          <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px dashed #ddd' }}/>
-          <h3 style={{ marginBottom: '16px', color: '#0366d6' }}>Tri thức bổ sung (Knowledge Base)</h3>
-          <p style={{ fontSize: '13px', color: '#666', marginBottom: '16px' }}>
-            *Nhập các ý ngăn cách nhau bởi dấu chấm phẩy (;). Ví dụ: Rủi ro A; Rủi ro B
-          </p>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Mâu thuẫn & Chồng chéo</label>
-            <textarea 
-              name="conflicts" value={kbForm.conflicts} onChange={handleKbChange} rows="2"
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} 
-            ></textarea>
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Rủi ro thực tiễn (Cảnh báo)</label>
-            <textarea 
-              name="practical_risks" value={kbForm.practical_risks} onChange={handleKbChange} rows="2"
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} 
-            ></textarea>
-          </div>
-
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Văn bản hướng dẫn liên quan</label>
-            <textarea 
-              name="related_decrees" value={kbForm.related_decrees} onChange={handleKbChange} rows="2"
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} 
-            ></textarea>
-          </div>
-
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <button type="submit" disabled={loading} style={{ backgroundColor: '#28a745', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-              {loading ? "Đang xử lý..." : isEditing ? "💾 Cập nhật Điều Luật" : "➕ Thêm Điều Luật"}
-            </button>
+            <hr style={{ margin: '24px 0', border: 'none', borderTop: '1px dashed #ddd' }}/>
             
-            {isEditing && (
-              <button type="button" onClick={resetForm} style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                Hủy Bỏ Sửa
+            <h3 style={{ fontSize: '16px', color: '#0366d6', marginBottom: '12px' }}>
+              🧠 Tri thức bổ sung (Knowledge Base)
+            </h3>
+            <p style={{ fontSize: '13px', color: '#666', marginBottom: '16px', fontStyle: 'italic' }}>
+              *Nhập các ý ngăn cách nhau bởi dấu chấm phẩy (;).
+            </p>
+
+            <div className="form-group">
+              <label>Mâu thuẫn & Chồng chéo</label>
+              <textarea 
+                className="form-control"
+                name="conflicts" 
+                value={kbForm.conflicts} 
+                onChange={handleKbChange} 
+                rows="2"
+                placeholder="VD: Trái với Luật Nhà ở 2014; Mâu thuẫn Nghị định 99"
+              ></textarea>
+            </div>
+
+            <div className="form-group">
+              <label>Rủi ro thực tiễn (Cảnh báo)</label>
+              <textarea 
+                className="form-control"
+                name="practical_risks" 
+                value={kbForm.practical_risks} 
+                onChange={handleKbChange} 
+                rows="2"
+                placeholder="VD: Khó áp dụng nếu không có xác nhận của UBND"
+              ></textarea>
+            </div>
+
+            <div className="form-group">
+              <label>Văn bản hướng dẫn liên quan</label>
+              <textarea 
+                className="form-control"
+                name="related_decrees" 
+                value={kbForm.related_decrees} 
+                onChange={handleKbChange} 
+                rows="2"
+                placeholder="VD: Nghị định 43/2014/NĐ-CP; Thông tư 02"
+              ></textarea>
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" disabled={loading} className="btn-primary">
+                {loading ? "Đang xử lý..." : isEditing ? "Lưu Cập Nhật" : "Lưu Điều Luật"}
               </button>
+              
+              {isEditing && (
+                <button type="button" onClick={resetForm} className="btn-secondary">
+                  Hủy Bỏ
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+
+        {/* Cột Phải: Danh sách */}
+        <div className="admin-card list-section">
+          <h2 className="form-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>📂 Cơ Sở Dữ Liệu Luật</span>
+            <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>
+              (Tổng: {articles.length})
+            </span>
+          </h2>
+          
+          <div className="table-container">
+            {loading && articles.length === 0 ? (
+              <div className="empty-state">⏳ Đang tải dữ liệu...</div>
+            ) : articles.length === 0 ? (
+              <div className="empty-state">📭 Chưa có dữ liệu nào. Hãy thêm mới!</div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '15%' }}>Số Điều</th>
+                    <th style={{ width: '25%' }}>Mã Luật</th>
+                    <th style={{ width: '40%' }}>Nội dung tóm tắt</th>
+                    <th style={{ width: '20%', textAlign: 'center' }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {articles.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="article-meta">{item.article_num}</td>
+                      <td>{item.law_id}</td>
+                      <td style={{ color: '#555' }}>
+                        {item.content.length > 100 ? item.content.substring(0, 100) + '...' : item.content}
+                      </td>
+                      <td>
+                        <div className="action-buttons" style={{ justifyContent: 'center' }}>
+                          <button 
+                            className="btn-icon btn-edit"
+                            title="Chỉnh sửa"
+                            onClick={() => handleEdit(item)}
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            className="btn-icon btn-delete" 
+                            title="Xoá"
+                            onClick={() => handleDelete(item.article_num)}
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
-        </form>
+        </div>
       </div>
-
-      {/* Danh sách */}
-      <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <h2>Danh sách các Điều Luật trong cơ sở dữ liệu</h2>
-        
-        {loading && articles.length === 0 ? <p>Đang tải dữ liệu...</p> : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '16px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f6f8fa', borderBottom: '2px solid #ddd' }}>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Số Điều</th>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Mã Luật</th>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Nội dung tóm tắt</th>
-                <th style={{ padding: '12px', textAlign: 'center' }}>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {articles.map((item, idx) => (
-                <tr key={idx} style={{ borderBottom: '1px solid #e1e4e8' }}>
-                  <td style={{ padding: '12px', fontWeight: 'bold', width: '120px' }}>{item.article_num}</td>
-                  <td style={{ padding: '12px', width: '180px' }}>{item.law_id}</td>
-                  <td style={{ padding: '12px', color: '#555' }}>
-                    {item.content.length > 80 ? item.content.substring(0, 80) + '...' : item.content}
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'center', width: '150px' }}>
-                    <button onClick={() => handleEdit(item)} style={{ backgroundColor: '#0366d6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}>Sửa</button>
-                    <button onClick={() => handleDelete(item.article_num)} style={{ backgroundColor: '#d73a49', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}>Xóa</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
     </div>
   )
 }

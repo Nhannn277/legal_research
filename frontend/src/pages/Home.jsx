@@ -7,6 +7,8 @@ function Home() {
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
   const [activeTab, setActiveTab] = useState('luat-goc')
+  const [loadingAI, setLoadingAI] = useState(false)
+  const [aiExplanation, setAiExplanation] = useState('')
 
   const handleSearch = async (text) => {
     const searchText = text || query
@@ -16,16 +18,37 @@ function Home() {
     setLoading(true)
     setError('')
     setResult(null)
+    setAiExplanation('')
+    setLoadingAI(false)
     setActiveTab('luat-goc')
 
     try {
-      // Gọi lên Backend FastAPI
+      // Gọi lên Backend FastAPI (Chỉ lấy DB trước)
       const response = await axios.post('http://localhost:8000/api/search', {
         query: searchText
       })
 
       if (response.data.found) {
         setResult(response.data)
+        
+        // Gọi tiếp AI để phân tích sau (Không chặn UI)
+        setLoadingAI(true)
+        axios.post('http://localhost:8000/api/explain', {
+          query: searchText,
+          law_content: response.data.content,
+          practical_risks: response.data.practical_risks || []
+        })
+        .then(res => {
+          setAiExplanation(res.data.explanation)
+        })
+        .catch(err => {
+          console.error(err)
+          setAiExplanation("Xin lỗi, không thể phân tích AI lúc này.")
+        })
+        .finally(() => {
+          setLoadingAI(false)
+        })
+
       } else {
         setError(response.data.message)
       }
@@ -68,6 +91,24 @@ function Home() {
             <p className="intro-desc">
               Hệ thống hỗ trợ tra cứu luật thông minh. Tự động trích xuất luật gốc, kiểm tra văn bản chồng chéo và đánh giá rủi ro pháp lý thực tiễn.
             </p>
+
+            <div className="feature-grid">
+              <div className="feature-card">
+                <span className="feature-icon">⚡</span>
+                <h3>Tốc độ vượt trội</h3>
+                <p>Tra cứu hàng nghìn văn bản luật chỉ trong tích tắc với công nghệ tìm kiếm vector.</p>
+              </div>
+              <div className="feature-card">
+                <span className="feature-icon">⚖️</span>
+                <h3>Nguồn chính thống</h3>
+                <p>Dữ liệu được trích xuất trực tiếp từ văn bản quy phạm pháp luật hiện hành.</p>
+              </div>
+              <div className="feature-card">
+                <span className="feature-icon">🧠</span>
+                <h3>Phân tích AI</h3>
+                <p>Sử dụng trí tuệ nhân tạo để giải thích luật và cảnh báo rủi ro pháp lý.</p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -81,22 +122,22 @@ function Home() {
               <button 
                 className={`tab-btn ${activeTab === 'luat-goc' ? 'active' : ''}`}
                 onClick={() => setActiveTab('luat-goc')}>
-                📜 Luật Gốc
+                ⚖️ Luật Gốc
               </button>
               <button 
                 className={`tab-btn ${activeTab === 'mau-thuan' ? 'active' : ''}`}
                 onClick={() => setActiveTab('mau-thuan')}>
-                ⚔️ Mâu Thuẫn & LQ
+                🔗 Mâu Thuẫn & LQ
               </button>
               <button 
                 className={`tab-btn ${activeTab === 'rui-ro' ? 'active' : ''}`}
                 onClick={() => setActiveTab('rui-ro')}>
-                ⚠️ Rủi Ro Thực Tế
+                🛡️ Rủi Ro Thực Tế
               </button>
               <button 
                 className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
                 onClick={() => setActiveTab('ai')}>
-                🤖 AI Trợ Lý
+                🧑‍⚖️ Chuyên Gia AI
               </button>
             </div>
 
@@ -152,7 +193,11 @@ function Home() {
                 <div className="ai-box">
                   <h3 style={{ color: '#0366d6' }}>🤖 AI Giải Thích:</h3>
                   <div style={{ whiteSpace: 'pre-line' }}>
-                    {result.ai_response}
+                    {loadingAI ? (
+                      <em style={{color: '#666'}}>Đang phân tích chuyên sâu... (Bạn có thể xem các tab khác)</em>
+                    ) : (
+                      aiExplanation || "Chưa có dữ liệu phân tích."
+                    )}
                   </div>
                 </div>
               )}
@@ -160,6 +205,10 @@ function Home() {
           </div>
         )}
       </div>
+    
+      <footer>
+        <p>© 2026 Legal Advisor AI - Hệ thống hỗ trợ pháp lý thông minh.</p>
+      </footer>
     </div>
   )
 }
