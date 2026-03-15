@@ -8,6 +8,12 @@ function Admin() {
   const [statusMsg, setStatusMsg] = useState('')
   const [statusType, setStatusType] = useState('success') // 'success' | 'error'
 
+  // Pagination & Search State
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [searchText, setSearchText] = useState('')
+  const LIMIT = 10
+
   // Form State
   const [form, setForm] = useState({
     law_id: '',
@@ -26,11 +32,23 @@ function Admin() {
   const [isEditing, setIsEditing] = useState(false)
 
   // Fetch Danh sách các điều luật hiện có
-  const fetchArticles = async () => {
+  const fetchArticles = async (currPage = 1, search = '') => {
     try {
       setLoading(true)
-      const res = await axios.get('http://localhost:8000/api/admin/articles')
-      setArticles(res.data)
+      const res = await axios.get('http://localhost:8000/api/admin/articles', {
+        params: {
+          page: currPage,
+          limit: LIMIT,
+          search: search
+        }
+      })
+      
+      if (res.data.data) {
+        setArticles(res.data.data)
+        setTotalPages(res.data.total_pages)
+      } else {
+        setArticles(res.data)
+      }
     } catch (error) {
       console.error(error)
       setStatusMsg("Lỗi khi tải danh sách điều luật.")
@@ -41,8 +59,14 @@ function Admin() {
   }
 
   useEffect(() => {
-    fetchArticles()
-  }, [])
+    fetchArticles(page, searchText)
+  }, [page]) // Search text change requires manual trigger or debounce, keeping simple for now
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    setPage(1)
+    fetchArticles(1, searchText)
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -91,7 +115,7 @@ function Admin() {
       await axios.delete(`http://localhost:8000/api/admin/articles/${article_num}`)
       setStatusMsg("Đã xoá điều luật thành công!")
       setStatusType('success')
-      fetchArticles()
+      fetchArticles(page, searchText)
     } catch (error) {
       console.error(error)
       setStatusMsg("Lỗi khi xoá dữ liệu.")
@@ -130,7 +154,13 @@ function Admin() {
       setStatusMsg(isEditing ? "Đã cập nhật thành công!" : "Đã thêm mới thành công!")
       setStatusType('success')
       resetForm()
-      fetchArticles()
+      if (isEditing) {
+        fetchArticles(page, searchText)
+      } else {
+        setPage(1)
+        setSearchText('')
+        fetchArticles(1, '')
+      }
     } catch (error) {
       console.error(error)
       setStatusMsg("Có lỗi xảy ra khi lưu. Vui lòng kiểm tra kết nối Server.")
@@ -256,10 +286,25 @@ function Admin() {
 
         {/* Cột Phải: Danh sách */}
         <div className="admin-card list-section">
+          
+          {/* Search Bar */}
+          <div className="search-bar" style={{ marginBottom: '15px' }}>
+             <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px' }}>
+                <input 
+                  type="text" 
+                  placeholder="Tìm kiếm theo mã luật, số điều, nội dung..." 
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  className="form-control"
+                />
+                <button type="submit" className="btn-primary" style={{ whiteSpace: 'nowrap', width: 'auto' }}>🔍 Tìm</button>
+             </form>
+          </div>
+
           <h2 className="form-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>📂 Cơ Sở Dữ Liệu Luật</span>
             <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>
-              (Tổng: {articles.length})
+              (Trang {page} / {totalPages})
             </span>
           </h2>
           
@@ -267,7 +312,7 @@ function Admin() {
             {loading && articles.length === 0 ? (
               <div className="empty-state">⏳ Đang tải dữ liệu...</div>
             ) : articles.length === 0 ? (
-              <div className="empty-state">📭 Chưa có dữ liệu nào. Hãy thêm mới!</div>
+              <div className="empty-state">📭 Chưa có dữ liệu nào phù hợp.</div>
             ) : (
               <table className="data-table">
                 <thead>
@@ -310,6 +355,29 @@ function Admin() {
               </table>
             )}
           </div>
+          
+           {/* Pagination */}
+           {totalPages > 1 && (
+              <div className="pagination" style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px' }}>
+                <button 
+                  onClick={() => setPage(p => Math.max(1, p - 1))} 
+                  disabled={page === 1}
+                  className="btn-secondary"
+                  style={{ opacity: page === 1 ? 0.5 : 1, padding: '8px 16px' }}
+                >
+                  ◀ Trước
+                </button>
+                <span style={{ lineHeight: '36px', fontWeight: 'bold' }}>Trang {page}</span>
+                <button 
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
+                  disabled={page === totalPages}
+                  className="btn-secondary"
+                  style={{ opacity: page === totalPages ? 0.5 : 1, padding: '8px 16px' }}
+                >
+                  Sau ▶
+                </button>
+              </div>
+           )}
         </div>
       </div>
     </div>

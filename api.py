@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,6 +32,32 @@ client = MongoClient(MONGO_URI)
 db = client["LegalAdvisorDB"]
 col_articles = db["articles"]
 col_kb = db["knowledge_base"]
+
+def find_exact_match(query_text):
+    """
+    Tìm kiếm chính xác số hiệu điều luật nếu người dùng nhập cụ thể.
+    Ví dụ: 'Điều 127', 'cho tôi hỏi điều 127' -> Tìm 'Điều 127'
+    """
+    query_text = query_text.strip()
+    
+    # Regex bắt pattern "Điều X" (case-insensitive)
+    match = re.search(r'(điều\s+\d+\w*)', query_text, re.IGNORECASE)
+    
+    if match:
+        article_ref = match.group(0) # e.g. "Điều 127"
+        # Chuẩn hóa khoảng trắng thừa
+        article_ref = re.sub(r'\s+', ' ', article_ref).strip()
+
+        # Tìm chính xác trong DB (case-insensitive)
+        doc = col_articles.find_one({
+            "article_num": {"$regex": f"^{re.escape(article_ref)}$", "$options": "i"},
+            "content": {"$exists": True} # Đảm bảo có nội dung
+        })
+        
+        if doc:
+            return doc
+
+    return None
 
 class ChatRequest(BaseModel):
     query: str
@@ -131,8 +158,12 @@ async def search_legal_info(req: ChatRequest):
         # Setup models (embedding only)
         embeddings_model = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
-        # Retrieval
-        match_doc = find_best_match(req.query, embeddings_model)
+        # 1. Ưu tiên tìm chính xác
+        match_doc = find_exact_match(req.query)
+
+        # 2. Nếu không có, mới tìm vector
+        if not match_doc:
+            match_doc = find_best_match(req.query, embeddings_model)
 
         if not match_doc:
             return {
@@ -168,8 +199,24 @@ class ArticleInput(BaseModel):
     related_decrees: List[str] = []
 
 @app.get("/api/admin/articles")
-async def get_all_articles():
-    cursor = col_articles.find({}, {"_id": 0, "vector_embedding": 0})
+async def get_all_articles(page: int = 1, limit: int = 10, search: str = ""):
+    query = {}
+    if search:
+        # Search in article_num or content or law_id
+        query = {
+            "$or": [
+                {"article_num": {"$regex": search, "$options": "i"}},
+                {"content": {"$regex": search, "$options": "i"}},
+                {"law_id": {"$regex": search, "$options": "i"}}
+            ]
+        }
+    
+    total_count = col_articles.count_documents(query)
+    
+    cursor = col_articles.find(query, {"_id": 0, "vector_embedding": 0})\
+        .skip((page - 1) * limit)\
+        .limit(limit)
+    
     articles = list(cursor)
     
     # Load knowledge base info for each
@@ -177,7 +224,13 @@ async def get_all_articles():
         kb_info = col_kb.find_one({"target_article": doc['article_num']}, {"_id": 0})
         doc['kb_info'] = kb_info or {}
         
-    return articles
+    return {
+        "data": articles,
+        "total": total_count,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total_count + limit - 1) // limit
+    }
 
 @app.post("/api/admin/articles")
 async def add_or_update_article(article: ArticleInput):

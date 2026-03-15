@@ -69,7 +69,7 @@ function Home() {
       <div className="main-content">
         <div className="header" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 60, marginBottom: 10 }}>⚖️</div>
-          <h1>Hệ Thống Trợ Lý Pháp Lý AI</h1>
+          <h1>Hệ Thống Trợ Lý Pháp Lý</h1>
         </div>
 
         <div className="search-box">
@@ -137,7 +137,7 @@ function Home() {
               <button 
                 className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
                 onClick={() => setActiveTab('ai')}>
-                🧑‍⚖️ Chuyên Gia AI
+                🧑‍⚖️ Chuyên Gia
               </button>
             </div>
 
@@ -191,7 +191,7 @@ function Home() {
 
               {activeTab === 'ai' && (
                 <div className="ai-box">
-                  <h3 style={{ color: '#0366d6' }}>🤖 AI Giải Thích:</h3>
+                  <h3 style={{ color: '#0366d6' }}>🧑‍⚖️ Chuyên gia Giải Thích:</h3>
                   <div style={{ whiteSpace: 'pre-line' }}>
                     {loadingAI ? (
                       <em style={{color: '#666'}}>Đang phân tích chuyên sâu... (Bạn có thể xem các tab khác)</em>
