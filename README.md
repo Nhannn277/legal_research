@@ -13,6 +13,7 @@ Dưới đây là hướng dẫn **cực kỳ đơn giản** để ai cũng có 
 1. **Python** (Để chạy lõi Trí tuệ Nhân tạo):
    - Vào Tải tại đây: [Tải Python về máy](https://www.python.org/downloads/)
    - ** QUAN TRỌNG:** Khi cài đặt Python, ở màn hình đầu tiên, HÃY NHỚ TÍCH VÀO ô **"Add Python to PATH"** (hoặc "Add python.exe to PATH") ở góc dưới màn hình cài đặt. Sau đó mới nhấn "Install Now".
+   - ** Tải python phiên bản 3.11.5 **
 
 2. **Node.js** (Để chạy giao diện trang Web):
    - Tải bản có chữ "LTS" (Bản ổn định) tại đây: [Tải Node.js về máy](https://nodejs.org/en/) (cài đặt cứ ấn Next liên tục là xong).
